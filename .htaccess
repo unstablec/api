@@ -1,0 +1,21 @@
+# Настройки Apache для корневой папки
+RewriteEngine On
+
+# Перенаправляем все запросы к /api/ на index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^api/(.*)$ api/index.php [QSA,L]
+
+# Все остальные запросы на главный index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Запрещаем доступ к логам
+<Files "api_log.json">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# Запрещаем доступ к папке logs
+RewriteRule ^logs/ - [F,L]

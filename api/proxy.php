@@ -45,6 +45,16 @@ function handleApiProxy($path) {
     $curlHeaders[] = 'Referer: https://vpvpay.store/';
     $curlHeaders[] = 'X-Requested-With: XMLHttpRequest';
     
+    // Дополнительные заголовки для обхода Access-Control-Allow-Origin
+    $curlHeaders[] = 'Sec-Fetch-Site: same-origin';
+    $curlHeaders[] = 'Sec-Fetch-Mode: cors';
+    $curlHeaders[] = 'Sec-Fetch-Dest: empty';
+    $curlHeaders[] = 'Accept: application/json, text/plain, */*';
+    $curlHeaders[] = 'Accept-Language: en-US,en;q=0.9,ru;q=0.8';
+    $curlHeaders[] = 'Accept-Encoding: gzip, deflate, br';
+    $curlHeaders[] = 'Cache-Control: no-cache';
+    $curlHeaders[] = 'Pragma: no-cache';
+    
     // Выполняем запрос к целевому API
     $ch = curl_init();
     curl_setopt_array($ch, [
@@ -56,7 +66,9 @@ function handleApiProxy($path) {
         CURLOPT_HEADER => true,
         CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_TIMEOUT => 30,
-        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        CURLOPT_ENCODING => '', // Автоматическая обработка сжатия
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_2_0 // HTTP/2 поддержка
     ]);
     
     // Устанавливаем тело запроса только для методов, которые его поддерживают
@@ -89,7 +101,7 @@ function handleApiProxy($path) {
         if (strpos($header, ':') !== false && !preg_match('/^HTTP\//', $header)) {
             // Пропускаем некоторые заголовки, которые могут конфликтовать
             $headerName = strtolower(explode(':', $header)[0]);
-            if (!in_array($headerName, ['transfer-encoding', 'connection', 'content-encoding'])) {
+            if (!in_array($headerName, ['transfer-encoding', 'connection', 'content-encoding', 'access-control-allow-origin', 'access-control-allow-methods', 'access-control-allow-headers'])) {
                 header($header);
             }
         }
@@ -98,8 +110,9 @@ function handleApiProxy($path) {
     // Добавляем CORS заголовки для клиента
     header('Access-Control-Allow-Origin: *');
     header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Api-Key, User-Agent');
     header('Access-Control-Max-Age: 86400');
+    header('Access-Control-Allow-Credentials: true');
     
     // Устанавливаем код ответа
     http_response_code($httpCode);

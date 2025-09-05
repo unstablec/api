@@ -41,12 +41,16 @@ function handleApiProxy($path) {
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_CUSTOMREQUEST => $method,
         CURLOPT_HTTPHEADER => $curlHeaders,
-        CURLOPT_POSTFIELDS => $requestBody,
         CURLOPT_HEADER => true,
         CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_TIMEOUT => 30,
         CURLOPT_USERAGENT => 'API-Proxy/1.0'
     ]);
+    
+    // Устанавливаем тело запроса только для методов, которые его поддерживают
+    if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE']) && !empty($requestBody)) {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $requestBody);
+    }
     
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

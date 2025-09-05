@@ -1,0 +1,3 @@
+# Запрещаем доступ к логам через веб
+Order Allow,Deny
+Deny from all

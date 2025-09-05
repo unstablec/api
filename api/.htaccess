@@ -1,0 +1,7 @@
+# Настройки Apache для папки api
+RewriteEngine On
+
+# Перенаправляем все запросы на index.php в этой папке
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]

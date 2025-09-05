@@ -6,6 +6,12 @@ define('TARGET_API_BASE', 'https://vpvpay.store/api/');
 define('LOG_FILE', __DIR__ . '/../logs/api_log.json');
 
 function handleApiProxy($path) {
+    // Обрабатываем CORS preflight запросы
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        handleCorsPreflightRequest();
+        return;
+    }
+    
     // Создаем директорию для логов если не существует
     $logDir = dirname(LOG_FILE);
     if (!is_dir($logDir)) {
@@ -27,11 +33,17 @@ function handleApiProxy($path) {
     // Подготавливаем заголовки для cURL
     $curlHeaders = [];
     foreach ($headers as $name => $value) {
-        // Пропускаем заголовки хоста
-        if (strtolower($name) !== 'host') {
+        // Пропускаем заголовки хоста и другие системные заголовки
+        $lowerName = strtolower($name);
+        if (!in_array($lowerName, ['host', 'connection', 'content-length'])) {
             $curlHeaders[] = $name . ': ' . $value;
         }
     }
+    
+    // Добавляем необходимые заголовки для обхода CORS и других ограничений
+    $curlHeaders[] = 'Origin: https://vpvpay.store';
+    $curlHeaders[] = 'Referer: https://vpvpay.store/';
+    $curlHeaders[] = 'X-Requested-With: XMLHttpRequest';
     
     // Выполняем запрос к целевому API
     $ch = curl_init();
@@ -44,7 +56,7 @@ function handleApiProxy($path) {
         CURLOPT_HEADER => true,
         CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_TIMEOUT => 30,
-        CURLOPT_USERAGENT => 'API-Proxy/1.0'
+        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     ]);
     
     // Устанавливаем тело запроса только для методов, которые его поддерживают
@@ -77,17 +89,34 @@ function handleApiProxy($path) {
         if (strpos($header, ':') !== false && !preg_match('/^HTTP\//', $header)) {
             // Пропускаем некоторые заголовки, которые могут конфликтовать
             $headerName = strtolower(explode(':', $header)[0]);
-            if (!in_array($headerName, ['transfer-encoding', 'connection'])) {
+            if (!in_array($headerName, ['transfer-encoding', 'connection', 'content-encoding'])) {
                 header($header);
             }
         }
     }
+    
+    // Добавляем CORS заголовки для клиента
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    header('Access-Control-Max-Age: 86400');
     
     // Устанавливаем код ответа
     http_response_code($httpCode);
     
     // Отправляем тело ответа
     echo $responseBody;
+}
+
+function handleCorsPreflightRequest() {
+    // Отвечаем на CORS preflight запросы
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Api-Key, User-Agent');
+    header('Access-Control-Max-Age: 86400');
+    header('Content-Length: 0');
+    http_response_code(200);
+    exit;
 }
 
 function logApiCall($method, $url, $requestHeaders, $requestBody, $responseCode, $responseHeaders, $responseBody) {
